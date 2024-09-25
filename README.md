@@ -7,7 +7,7 @@ A versatile bash script to automate memory forensics using **Volatility 2** and 
 - **Supports both Volatility 2 and Volatility 3**.
 - **Automatic version detection** or allows manual entry of the Volatility file path.
 - **Profile selection** for Volatility 2 with the ability to reselect profiles.
-- A comprehensive list of commands, including `pslist`, `pstree`, `dlllist`, `netscan`, `filescan`, `connscan`, and `malfind`.
+- A comprehensive list of commands, including `pslist`, `pstree`, `dlllist`, `netscan`, `filescan`, `mftscan`, and `malfind`.
 - **Color-coded menus** to distinguish between options and commands for easy navigation.
 - **Graceful exit** on `Ctrl+C`, allowing clean termination.
 
@@ -86,7 +86,7 @@ Example commands for Volatility 2:
 3) dlllist
 4) netscan
 5) filescan
-6) connscan
+6) mftscan
 7) malfind
 8) Exit
 
@@ -101,7 +101,7 @@ Example commands for Volatility 3:
 3) dlllist
 4) netscan
 5) filescan
-6) connscan
+6) mftscan
 7) malfind
 8) Exit
 
@@ -136,7 +136,7 @@ The output for each command is saved to a text file in the directory of your cho
 - `dlllist`: List loaded DLLs for processes.
 - `netscan`: Scan for network connections.
 - `filescan`: Scan for file objects in memory.
-- `connscan`: Scan for connections.
+- `mftscan`: Scan for mft entries.
 - `malfind`: Detect hidden or injected code.
 
 ### Volatility 3 Commands
@@ -146,7 +146,7 @@ The output for each command is saved to a text file in the directory of your cho
 - `windows.dlllist.DllList`: List loaded DLLs for processes.
 - `windows.netscan.NetScan`: Scan for network connections.
 - `windows.filescan.FileScan`: Scan for file objects in memory.
-- `windows.network.ConnScan`: Scan for connections.
+- `windows.mftscan.mftscan`: Scan for connections.
 - `windows.malfind.Malfind`: Detect hidden or injected code.
 
 ## Credits
