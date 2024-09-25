@@ -146,7 +146,7 @@ The output for each command is saved to a text file in the directory of your cho
 - `windows.dlllist.DllList`: List loaded DLLs for processes.
 - `windows.netscan.NetScan`: Scan for network connections.
 - `windows.filescan.FileScan`: Scan for file objects in memory.
-- `windows.mftscan.mftscan`: Scan for connections.
+- `windows.mftscan.mftscan`: Scan for mft entries.
 - `windows.malfind.Malfind`: Detect hidden or injected code.
 
 ## Credits
