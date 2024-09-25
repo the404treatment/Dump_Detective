@@ -9,7 +9,7 @@ echo " | |__| | |_| | | | | | | |_) |             "
 echo " |_____/ \__,_|_| |_| |_| .__/ _            "
 echo " |  __ \     | |        | | | (_)           "
 echo " | |  | | ___| |_ ___  _|_| |_ ___   _____  "
-echo " |  | | |/ _ \ __/ _ \/ __| __| \ \ / / _ \ "
+echo " |  | |/ _ \ __/ _ \/ __| __| \ \ / / _ \ "
 echo " | |__| |  __/ ||  __/ (__| |_| |\ V /  __/ "
 echo " |_____/ \___|\__\___|\___|\__|_| \_/ \___| "
 echo "                                            "
@@ -24,10 +24,38 @@ ctrl_c() {
   exit 1  # Immediately exit the script when interrupted
 }
 
+# Available commands for Volatility 2 and Volatility 3
+volatility_2_commands=(
+    "pslist" "pstree" "dlllist" "malfind" "connscan" "filescan" 
+    "hivelist" "hashdump" "sockscan" "psscan" "handles" "modules"
+    "getsids" "vadinfo" "cmdscan" "ldrmodules" "procdump"
+)
+
+volatility_3_commands=(
+    "windows.pslist.PsList" "windows.pstree.PsTree" "windows.dlllist.DllList"
+    "windows.malfind.Malfind" "windows.network.ConnScan" "windows.filescan.FileScan"
+    "windows.registry.HiveList" "windows.hashdump.Hashdump" "windows.sockets.SockScan"
+    "windows.psscan.PsScan" "windows.handles.Handles" "windows.modules.Modules"
+    "windows.getsids.GetSIDs" "windows.vadinfo.VadInfo" "windows.cmdscan.CmdScan"
+    "windows.procdump.ProcDump"
+)
+
+# Function to check if a manual command exists in the current version
+check_command_exists() {
+  local input_command=$1
+  local commands_list=("${!2}")
+  
+  for cmd in "${commands_list[@]}"; do
+    if [[ "$cmd" == *"$input_command"* ]]; then
+      return 0  # Command exists
+    fi
+  done
+  return 1  # Command does not exist
+}
+
 # Function to check if Volatility 3 is installed by running `vol`
 check_volatility_3_linux() {
   if command -v vol >/dev/null 2>&1; then
-    # Run `vol` and check for "Volatility 3 Framework" in the output
     if vol 2>&1 | grep -q "Volatility 3 Framework"; then
       return 0  # Volatility 3 is installed and detected
     else
@@ -62,7 +90,8 @@ fi
 # Function to handle manual file path input for Volatility 2 or 3
 manual_input_volatility_path() {
   while true; do
-    echo -e "\e[31m(Note: This input is case-sensitive)\e[0m"  # Red text for case sensitivity
+    echo -e "\e[31m(Note: The path is case-sensitive. e.g., /path/to/Volatility2/vol.py)\e[0m"  # Red text for path guidance
+    echo -e "\e[33mExample usage for Volatility 3 commands: windows.pslist.PsList\e[0m"  # Volatility 3 example usage
     read -p "Please enter the full path to vol.py: " VOL_PATH
     if [ -f "$VOL_PATH" ]; then
       echo "File found: $VOL_PATH"
@@ -165,7 +194,7 @@ while true; do
         echo "Running imageinfo to suggest profiles..."
         
         # Run imageinfo and capture the output to extract profiles
-        $VOL_CMD -f "$MEMORY_FILE" imageinfo | tee imageinfo_output.txt
+        $VOL_CMD -f "$MEMORY_FILE" imageinfo > imageinfo_output.txt
         if [ $? -eq 1 ]; then  # If interrupted, exit the program
           echo "Process interrupted. Exiting..."
           exit 1
@@ -218,16 +247,18 @@ while true; do
       echo -e "\e[31m5)\e[0m \e[33mfilescan\e[0m ($VOL_CMD -f \"$MEMORY_FILE\" --profile=\"$PROFILE\" filescan)"
       echo -e "\e[31m6)\e[0m \e[33mmftparser\e[0m ($VOL_CMD -f \"$MEMORY_FILE\" --profile=\"$PROFILE\" mftsparser)"
       echo -e "\e[31m7)\e[0m \e[33mmalfind\e[0m ($VOL_CMD -f \"$MEMORY_FILE\" --profile=\"$PROFILE\" malfind)"
-      echo -e "\e[31m8)\e[0m Exit"
+      echo -e "\e[31m8)\e[0m \e[33mEnter manual command"
+      echo -e "\e[31m9)\e[0m Exit"
     else
       echo -e "\e[31m1)\e[0m \e[33mpslist\e[0m ($VOL_CMD -f \"$MEMORY_FILE\" windows.pslist.PsList)"
-      echo -e "\e[31m2)\e[0m \e[33mpstree\e[0m ($VOL_CMD -f \"$MEMORY_FILE\" windows.pslist.PsTree)"
+      echo -e "\e[31m2)\e[0m \e[33mpstree\e[0m ($VOL_CMD -f \"$MEMORY_FILE\" windows.pstree.PsTree)"  # Changed from pslist.pstree to pstree.pstree
       echo -e "\e[31m3)\e[0m \e[33mdlllist\e[0m ($VOL_CMD -f \"$MEMORY_FILE\" windows.dlllist.DllList)"
       echo -e "\e[31m4)\e[0m \e[33mnetscan\e[0m ($VOL_CMD -f \"$MEMORY_FILE\" windows.netscan.NetScan)"
       echo -e "\e[31m5)\e[0m \e[33mfilescan\e[0m ($VOL_CMD -f \"$MEMORY_FILE\" windows.filescan.FileScan)"
       echo -e "\e[31m6)\e[0m \e[33mMFTscan\e[0m ($VOL_CMD -f \"$MEMORY_FILE\" windows.mftscan.MFTScan)"
       echo -e "\e[31m7)\e[0m \e[33mmalfind\e[0m ($VOL_CMD -f \"$MEMORY_FILE\" windows.malfind.Malfind)"
-      echo -e "\e[31m8)\e[0m Exit"
+      echo -e "\e[31m8)\e[0m \e[33mEnter manual command"
+      echo -e "\e[31m9)\e[0m Exit"
     fi
     read -p "Please select a command to run: " COMMAND
 
@@ -235,88 +266,85 @@ while true; do
       1)
         OUTPUT_FILE="${OUTPUT_DIR}/pslist.txt"
         if [ "$USE_PROFILE" == true ]; then
-          $VOL_CMD -f "$MEMORY_FILE" --profile="$PROFILE" pslist | tee "$OUTPUT_FILE"
+          $VOL_CMD -f "$MEMORY_FILE" --profile="$PROFILE" pslist > "$OUTPUT_FILE"
         else
-          $VOL_CMD -f "$MEMORY_FILE" windows.pslist.PsList | tee "$OUTPUT_FILE"
-        fi
-        if [ $? -eq 1 ]; then  # If interrupted, exit the program
-          echo "Process interrupted. Exiting..."
-          exit 1
+          $VOL_CMD -f "$MEMORY_FILE" windows.pslist.PsList > "$OUTPUT_FILE"
         fi
         ;;
       2)
         OUTPUT_FILE="${OUTPUT_DIR}/pstree.txt"
         if [ "$USE_PROFILE" == true ]; then
-          $VOL_CMD -f "$MEMORY_FILE" --profile="$PROFILE" pstree | tee "$OUTPUT_FILE"
+          $VOL_CMD -f "$MEMORY_FILE" --profile="$PROFILE" pstree > "$OUTPUT_FILE"
         else
-          $VOL_CMD -f "$MEMORY_FILE" windows.pslist.PsTree | tee "$OUTPUT_FILE"
-        fi
-        if [ $? -eq 1 ]; then  # If interrupted, exit the program
-          echo "Process interrupted. Exiting..."
-          exit 1
+          $VOL_CMD -f "$MEMORY_FILE" windows.pstree.PsTree > "$OUTPUT_FILE"
         fi
         ;;
       3)
         OUTPUT_FILE="${OUTPUT_DIR}/dlllist_all.txt"
         if [ "$USE_PROFILE" == true ]; then
-          $VOL_CMD -f "$MEMORY_FILE" --profile="$PROFILE" dlllist | tee "$OUTPUT_FILE"
+          $VOL_CMD -f "$MEMORY_FILE" --profile="$PROFILE" dlllist > "$OUTPUT_FILE"
         else
-          $VOL_CMD -f "$MEMORY_FILE" windows.dlllist.DllList | tee "$OUTPUT_FILE"
-        fi
-        if [ $? -eq 1 ]; then  # If interrupted, exit the program
-          echo "Process interrupted. Exiting..."
-          exit 1
+          $VOL_CMD -f "$MEMORY_FILE" windows.dlllist.DllList > "$OUTPUT_FILE"
         fi
         ;;
       4)
         OUTPUT_FILE="${OUTPUT_DIR}/netscan.txt"
         if [ "$USE_PROFILE" == true ]; then
-          $VOL_CMD -f "$MEMORY_FILE" --profile="$PROFILE" netscan | tee "$OUTPUT_FILE"
+          $VOL_CMD -f "$MEMORY_FILE" --profile="$PROFILE" netscan > "$OUTPUT_FILE"
         else
-          $VOL_CMD -f "$MEMORY_FILE" windows.netscan.NetScan | tee "$OUTPUT_FILE"
-        fi
-        if [ $? -eq 1 ]; then  # If interrupted, exit the program
-          echo "Process interrupted. Exiting..."
-          exit 1
+          $VOL_CMD -f "$MEMORY_FILE" windows.netscan.NetScan > "$OUTPUT_FILE"
         fi
         ;;
       5)
         OUTPUT_FILE="${OUTPUT_DIR}/filescan.txt"
         if [ "$USE_PROFILE" == true ]; then
-          $VOL_CMD -f "$MEMORY_FILE" --profile="$PROFILE" filescan | tee "$OUTPUT_FILE"
+          $VOL_CMD -f "$MEMORY_FILE" --profile="$PROFILE" filescan > "$OUTPUT_FILE"
         else
-          $VOL_CMD -f "$MEMORY_FILE" windows.filescan.FileScan | tee "$OUTPUT_FILE"
-        fi
-        if [ $? -eq 1 ]; then  # If interrupted, exit the program
-          echo "Process interrupted. Exiting..."
-          exit 1
+          $VOL_CMD -f "$MEMORY_FILE" windows.filescan.FileScan > "$OUTPUT_FILE"
         fi
         ;;
       6)
         OUTPUT_FILE="${OUTPUT_DIR}/mftscan.txt"
         if [ "$USE_PROFILE" == true ]; then
-          $VOL_CMD -f "$MEMORY_FILE" --profile="$PROFILE" mftparser | tee "$OUTPUT_FILE"
+          $VOL_CMD -f "$MEMORY_FILE" --profile="$PROFILE" mftparser > "$OUTPUT_FILE"
         else
-          $VOL_CMD -f "$MEMORY_FILE" windows.mftscan.MFTScan | tee "$OUTPUT_FILE"
-        fi
-        if [ $? -eq 1 ]; then  # If interrupted, exit the program
-          echo "Process interrupted. Exiting..."
-          exit 1
+          $VOL_CMD -f "$MEMORY_FILE" windows.mftscan.MFTScan > "$OUTPUT_FILE"
         fi
         ;;
       7)
         OUTPUT_FILE="${OUTPUT_DIR}/malfind.txt"
         if [ "$USE_PROFILE" == true ]; then
-          $VOL_CMD -f "$MEMORY_FILE" --profile="$PROFILE" malfind | tee "$OUTPUT_FILE"
+          $VOL_CMD -f "$MEMORY_FILE" --profile="$PROFILE" malfind > "$OUTPUT_FILE"
         else
-          $VOL_CMD -f "$MEMORY_FILE" windows.malfind.Malfind | tee "$OUTPUT_FILE"
-        fi
-        if [ $? -eq 1 ]; then  # If interrupted, exit the program
-          echo "Process interrupted. Exiting..."
-          exit 1
+          $VOL_CMD -f "$MEMORY_FILE" windows.malfind.Malfind > "$OUTPUT_FILE"
         fi
         ;;
       8)
+        if [ "$VOL_VERSION" == "1" ]; then
+          echo -e "\e[33mExample usage for commands with --dump or -o switch for Volatility 2:\e[0m"
+          echo "python2 ./vol.py -f <memory_dump> --profile=<profile> procdump --dump-dir=<directory>"
+        else
+          echo -e "\e[33mExample usage for commands with --dump or -o switch for Volatility 3:\e[0m"
+          echo "vol -f <memory_dump> windows.procdump.ProcDump --dump"
+        fi
+
+        read -p "Please enter the manual command: " MANUAL_CMD
+        COMMAND_NAME=$(echo $MANUAL_CMD | awk '{print $1}')
+        
+        # Handle commands that include --dump or -o
+        if [[ $MANUAL_CMD == *"--dump"* ]] || [[ $MANUAL_CMD == *"-o"* ]]; then
+          echo -e "\e[33mThis command includes an option to save a dump to a file. Please provide the file path where the dump should be saved.\e[0m"
+          read -p "Enter output file path for dump: " DUMP_PATH
+          MANUAL_CMD+=" $DUMP_PATH"
+        fi
+        OUTPUT_FILE="${OUTPUT_DIR}/${COMMAND_NAME}_output.txt"
+        if [ "$USE_PROFILE" == true ]; then
+          $VOL_CMD -f "$MEMORY_FILE" --profile="$PROFILE" $MANUAL_CMD > "$OUTPUT_FILE"
+        else
+          $VOL_CMD -f "$MEMORY_FILE" $MANUAL_CMD > "$OUTPUT_FILE"
+        fi
+        ;;
+      9)
         echo "Exiting..."
         exit 0
         ;;
@@ -326,5 +354,3 @@ while true; do
     esac
   done
 done
-
-
