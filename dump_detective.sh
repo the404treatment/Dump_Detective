@@ -15,9 +15,6 @@ echo " |_____/ \___|\__\___|\___|\__|_| \_/ \___| "
 echo "                                            "
 echo -e "\e[33mCreator: Michael Pacheco\e[0m"  # Yellow text
 
-# Display the warning in red color
-echo -e "\e[31mWARNING: You must run this script from within the Volatility folder where the vol.py file is located.\e[0m"
-
 # Trap to handle Ctrl+C interruption
 trap ctrl_c INT
 
