@@ -111,7 +111,7 @@ If the script cannot automatically detect the Volatility version, you will be pr
 
 Please enter the full path to vol.py:
 (Note: This input is case-sensitive)
-```
+
 
 ### Graceful Exit
 
