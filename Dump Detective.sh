@@ -164,7 +164,7 @@ while true; do
       read -p "Profile name: " PROFILE
 
       # If no profile is entered, run imageinfo to suggest profiles
-      if [ -z "$PROFILE" ]; then
+      if [ -z "$PROFILE" ];then
         echo "Running imageinfo to suggest profiles..."
         
         # Run imageinfo and capture the output to extract profiles
@@ -193,7 +193,6 @@ while true; do
 
       # Now ask if the user wants to proceed with this profile or go back to select another
       while true; do
-        echo "You have selected profile: $PROFILE"
         echo "1) Proceed with this profile"
         echo "2) Go back and select another profile"
         read -p "Please enter 1 or 2: " PROFILE_CHOICE
@@ -219,13 +218,19 @@ while true; do
       echo -e "\e[31m2)\e[0m \e[33mpstree\e[0m ($VOL_CMD -f \"$MEMORY_FILE\" --profile=\"$PROFILE\" pstree)"
       echo -e "\e[31m3)\e[0m \e[33mdlllist\e[0m ($VOL_CMD -f \"$MEMORY_FILE\" --profile=\"$PROFILE\" dlllist)"
       echo -e "\e[31m4)\e[0m \e[33mnetscan\e[0m ($VOL_CMD -f \"$MEMORY_FILE\" --profile=\"$PROFILE\" netscan)"
-      echo -e "\e[31m5)\e[0m Exit"
+      echo -e "\e[31m5)\e[0m \e[33mfilescan\e[0m ($VOL_CMD -f \"$MEMORY_FILE\" --profile=\"$PROFILE\" filescan)"
+      echo -e "\e[31m6)\e[0m \e[33mmftparser\e[0m ($VOL_CMD -f \"$MEMORY_FILE\" --profile=\"$PROFILE\" mftsparser)"
+      echo -e "\e[31m7)\e[0m \e[33mmalfind\e[0m ($VOL_CMD -f \"$MEMORY_FILE\" --profile=\"$PROFILE\" malfind)"
+      echo -e "\e[31m8)\e[0m Exit"
     else
       echo -e "\e[31m1)\e[0m \e[33mpslist\e[0m ($VOL_CMD -f \"$MEMORY_FILE\" windows.pslist.PsList)"
       echo -e "\e[31m2)\e[0m \e[33mpstree\e[0m ($VOL_CMD -f \"$MEMORY_FILE\" windows.pslist.PsTree)"
       echo -e "\e[31m3)\e[0m \e[33mdlllist\e[0m ($VOL_CMD -f \"$MEMORY_FILE\" windows.dlllist.DllList)"
       echo -e "\e[31m4)\e[0m \e[33mnetscan\e[0m ($VOL_CMD -f \"$MEMORY_FILE\" windows.netscan.NetScan)"
-      echo -e "\e[31m5)\e[0m Exit"
+      echo -e "\e[31m5)\e[0m \e[33mfilescan\e[0m ($VOL_CMD -f \"$MEMORY_FILE\" windows.filescan.FileScan)"
+      echo -e "\e[31m6)\e[0m \e[33mMFTscan\e[0m ($VOL_CMD -f \"$MEMORY_FILE\" windows.mftscan.MFTScan)"
+      echo -e "\e[31m7)\e[0m \e[33mmalfind\e[0m ($VOL_CMD -f \"$MEMORY_FILE\" windows.malfind.Malfind)"
+      echo -e "\e[31m8)\e[0m Exit"
     fi
     read -p "Please select a command to run: " COMMAND
 
@@ -279,6 +284,42 @@ while true; do
         fi
         ;;
       5)
+        OUTPUT_FILE="${OUTPUT_DIR}/filescan.txt"
+        if [ "$USE_PROFILE" == true ]; then
+          $VOL_CMD -f "$MEMORY_FILE" --profile="$PROFILE" filescan | tee "$OUTPUT_FILE"
+        else
+          $VOL_CMD -f "$MEMORY_FILE" windows.filescan.FileScan | tee "$OUTPUT_FILE"
+        fi
+        if [ $? -eq 1 ]; then  # If interrupted, exit the program
+          echo "Process interrupted. Exiting..."
+          exit 1
+        fi
+        ;;
+      6)
+        OUTPUT_FILE="${OUTPUT_DIR}/mftscan.txt"
+        if [ "$USE_PROFILE" == true ]; then
+          $VOL_CMD -f "$MEMORY_FILE" --profile="$PROFILE" mftparser | tee "$OUTPUT_FILE"
+        else
+          $VOL_CMD -f "$MEMORY_FILE" windows.mftscan.MFTScan | tee "$OUTPUT_FILE"
+        fi
+        if [ $? -eq 1 ]; then  # If interrupted, exit the program
+          echo "Process interrupted. Exiting..."
+          exit 1
+        fi
+        ;;
+      7)
+        OUTPUT_FILE="${OUTPUT_DIR}/malfind.txt"
+        if [ "$USE_PROFILE" == true ]; then
+          $VOL_CMD -f "$MEMORY_FILE" --profile="$PROFILE" malfind | tee "$OUTPUT_FILE"
+        else
+          $VOL_CMD -f "$MEMORY_FILE" windows.malfind.Malfind | tee "$OUTPUT_FILE"
+        fi
+        if [ $? -eq 1 ]; then  # If interrupted, exit the program
+          echo "Process interrupted. Exiting..."
+          exit 1
+        fi
+        ;;
+      8)
         echo "Exiting..."
         exit 0
         ;;
@@ -288,3 +329,5 @@ while true; do
     esac
   done
 done
+
+
