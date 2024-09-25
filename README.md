@@ -142,7 +142,7 @@ The output for each command is saved to a text file in the directory of your cho
 ### Volatility 3 Commands
 
 - `windows.pslist.PsList`: List running processes.
-- `windows.pslist.PsTree`: Show processes in a tree structure.
+- `windows.pstree.PsTree`: Show processes in a tree structure.
 - `windows.dlllist.DllList`: List loaded DLLs for processes.
 - `windows.netscan.NetScan`: Scan for network connections.
 - `windows.filescan.FileScan`: Scan for file objects in memory.
