@@ -13,7 +13,7 @@ echo " |  | |/ _ \ __/ _ \/ __| __| \ \ / / _ \ "
 echo " | |__| |  __/ ||  __/ (__| |_| |\ V /  __/ "
 echo " |_____/ \___|\__\___|\___|\__|_| \_/ \___| "
 echo "                                            "
-echo -e "\e[33mCreator: Michael Pacheco\e[0m"  # Yellow text
+echo -e "\e[33mCreator: The404treatment\e[0m"  # Yellow text
 
 # Trap to handle Ctrl+C interruption
 trap ctrl_c INT
