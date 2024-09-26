@@ -24,14 +24,15 @@ ctrl_c() {
   exit 1  # Immediately exit the script when interrupted
 }
 
-# Available commands for Volatility 2 and Volatility 3
+# Available commands for Volatility 2 in the command options menu
 volatility_2_commands=(
     "pslist" "pstree" "dlllist" "malfind" "connscan" "filescan" 
     "hivelist" "hashdump" "sockscan" "psscan" "handles" "modules"
     "getsids" "vadinfo" "cmdscan" "ldrmodules" "procdump"
 )
 
-volatility_3_commands=(
+# Available commands for Volatility 3 (Windows) in the command options menu
+volatility_3_commands_windows=(
     "windows.pslist.PsList" "windows.pstree.PsTree" "windows.dlllist.DllList"
     "windows.malfind.Malfind" "windows.network.ConnScan" "windows.filescan.FileScan"
     "windows.registry.HiveList" "windows.hashdump.Hashdump" "windows.sockets.SockScan"
@@ -40,72 +41,58 @@ volatility_3_commands=(
     "windows.procdump.ProcDump"
 )
 
-# Function to check if a manual command exists in the current version
-check_command_exists() {
-  local input_command=$1
-  local commands_list=("${!2}")
-  
-  for cmd in "${commands_list[@]}"; do
-    if [[ "$cmd" == *"$input_command"* ]]; then
-      return 0  # Command exists
-    fi
-  done
-  return 1  # Command does not exist
-}
+# Expanded command list for manual command input (Volatility 2)
+volatility_2_manual_commands=(
+    "pslist" "pstree" "dlllist" "malfind" "connscan" "filescan" 
+    "hivelist" "hashdump" "sockscan" "psscan" "handles" "modules"
+    "getsids" "vadinfo" "cmdscan" "ldrmodules" "procdump" "svcscan"
+    "envars" "iehistory" "netscan" "mftparser" "shimcache" "yarascan"
+    "memdump" "malfind" "procdump" "dumpfiles" "timeliner"
+)
 
-# Function to check if Volatility 3 is installed by running `vol`
-check_volatility_3_linux() {
-  if command -v vol >/dev/null 2>&1; then
-    if vol 2>&1 | grep -q "Volatility 3 Framework"; then
-      return 0  # Volatility 3 is installed and detected
-    else
-      return 1  # Volatility 3 command found but not detected correctly
-    fi
-  else
-    return 1  # Volatility 3 not installed
+# Expanded command list for manual command input (Volatility 3 - Windows)
+volatility_3_manual_commands_windows=(
+    "windows.pslist.PsList" "windows.pstree.PsTree" "windows.dlllist.DllList"
+    "windows.malfind.Malfind" "windows.network.ConnScan" "windows.filescan.FileScan"
+    "windows.registry.HiveList" "windows.hashdump.Hashdump" "windows.sockets.SockScan"
+    "windows.psscan.PsScan" "windows.handles.Handles" "windows.modules.Modules"
+    "windows.getsids.GetSIDs" "windows.vadinfo.VadInfo" "windows.cmdscan.CmdScan"
+    "windows.procdump.ProcDump" "windows.memdump.MemDump" "windows.shimcache.ShimCache"
+    "windows.netscan.NetScan" "windows.envars.Envars" "windows.yarascan.YaraScan"
+    "windows.timeliner.Timeliner" "windows.registry.Shimcache"
+)
+
+# Function to search for vol.py using locate or find
+search_for_vol_py() {
+  local version=$1  # Volatility version (2 or 3)
+
+  # Try using locate first (faster)
+  VOL_PATH=$(locate vol.py | grep -i "volatility${version}" | head -n 1)
+
+  if [ -z "$VOL_PATH" ];then
+    # If locate fails, fall back on find (slower)
+    VOL_PATH=$(find /usr /opt $HOME -name vol.py 2>/dev/null | grep -i "volatility${version}" | head -n 1)
   fi
+
+  echo "$VOL_PATH"
 }
-
-# Function to check if Volatility 2 is installed by running `python2 vol.py`
-check_volatility_2() {
-  if command -v python2 >/dev/null 2>&1 && [ -f "./vol.py" ]; then
-    return 0  # Volatility 2 is installed and detected
-  else
-    return 1  # Volatility 2 not installed
-  fi
-}
-
-# Backend detection: Check if Volatility 2 and 3 are installed
-vol2_installed=false
-vol3_installed=false
-
-if check_volatility_3_linux; then
-  vol3_installed=true
-fi
-
-if check_volatility_2; then
-  vol2_installed=true
-fi
 
 # Function to handle manual file path input for Volatility 2 or 3
 manual_input_volatility_path() {
   while true; do
-    echo -e "\e[31m(Note: The path is case-sensitive. e.g., /path/to/Volatility2/vol.py)\e[0m"  # Red text for path guidance
-    echo -e "\e[33mExample usage for Volatility 3 commands: windows.pslist.PsList\e[0m"  # Volatility 3 example usage
+    echo -e "\e[31m(Note: The path is case-sensitive. e.g., /path/to/Volatility2/vol.py)\e[0m"
     read -p "Please enter the full path to vol.py: " VOL_PATH
-    if [ -f "$VOL_PATH" ]; then
+    if [ -f "$VOL_PATH" ];then
       echo "File found: $VOL_PATH"
-      if [[ "$VOL_VERSION" == "1" ]]; then
-        VOL_CMD="python2 $VOL_PATH"
-      else
-        VOL_CMD="$VOL_PATH"
-      fi
+      VOL_CMD="python2 $VOL_PATH"
       break
     else
       echo "File not found. Please try again."
     fi
   done
 }
+
+# ------------------ MAIN LOGIC FOR DETECTION AND FALLBACK ------------------ #
 
 # Ask the user to choose which version of Volatility to use
 while true; do
@@ -114,76 +101,63 @@ while true; do
   echo "2) Volatility 3"
   read -p "Please enter 1 or 2: " VOL_VERSION
 
-  if [ "$VOL_VERSION" == "1" ]; then
-    if [ "$vol2_installed" == true ]; then
-      VOL_CMD="python2 ./vol.py"
-      USE_PROFILE=true  # Volatility 2 uses --profile
-      echo "Using Volatility 2."
-      break
-    else
-      echo "Volatility 2 was not detected."
-      echo "1) Enter file path for vol.py manually"
-      echo "2) Go back and select another version"
-      read -p "Please enter 1 or 2: " VOL_CHOICE
-      if [ "$VOL_CHOICE" == "1" ]; then
-        manual_input_volatility_path
-        USE_PROFILE=true
-        break
-      elif [ "$VOL_CHOICE" == "2" ]; then
-        continue
+  if [ "$VOL_VERSION" == "1" ];then
+    # Volatility 2 detection
+    VOL_PATH=$(search_for_vol_py 2)
+    if [ -n "$VOL_PATH" ];then
+      echo -e "\e[32mFound vol.py at: $VOL_PATH\e[0m"
+      read -p "Do you want to use this path? (y/n): " USE_FOUND_PATH
+      if [ "$USE_FOUND_PATH" == "y" ] || [ "$USE_FOUND_PATH" == "Y" ];then
+        VOL_CMD="python2 $VOL_PATH"
       else
-        echo "Invalid input."
-      fi
-    fi
-  elif [ "$VOL_VERSION" == "2" ]; then
-    if [ "$vol3_installed" == true ]; then
-      VOL_CMD="vol"
-      USE_PROFILE=false  # Volatility 3 does not use --profile
-      echo "Using Volatility 3."
-      break
-    else
-      echo "Volatility 3 was not detected."
-      echo "1) Enter file path for vol.py manually"
-      echo "2) Go back and select another version"
-      read -p "Please enter 1 or 2: " VOL_CHOICE
-      if [ "$VOL_CHOICE" == "1" ]; then
         manual_input_volatility_path
-        USE_PROFILE=false
-        break
-      elif [ "$VOL_CHOICE" == "2" ]; then
-        continue
-      else
-        echo "Invalid input."
       fi
+    else
+      echo -e "\e[31mvol.py not found. Please enter the path manually.\e[0m"
+      manual_input_volatility_path
     fi
+    USE_PROFILE=true
+    break
+
+  elif [ "$VOL_VERSION" == "2" ];then
+    # Volatility 3 detection
+    VOL_CMD="vol"
+    USE_PROFILE=false
+    echo "Using Volatility 3."
+    break
+
   else
     echo "Invalid input. Please choose 1 or 2."
   fi
 done
 
-# Main loop allowing the user to go back to previous steps
+# ------------------ COMMAND OPTIONS SECTION ------------------ #
+# Ensure the memory file and output directory are only asked for once, not multiple times
+MEMORY_FILE=""
+OUTPUT_DIR=""
+PROFILE=""
+
 while true; do
-  # Prompt the user to input the location of the memory file
-  read -p "Please enter the full path of the memory file: " MEMORY_FILE
-
-  # Prompt the user to specify the directory for saving output files
-  read -p "Please enter the directory where you want to save the output files: " OUTPUT_DIR
-
-  # Ensure the output directory exists
-  if [ ! -d "$OUTPUT_DIR" ]; then
-    echo "Directory does not exist. Please create it or specify an existing directory."
-    continue
+  if [ -z "$MEMORY_FILE" ];then
+    read -p "Please enter the full path of the memory file: " MEMORY_FILE
+    if [ ! -f "$MEMORY_FILE" ];then
+      echo "Error: Memory file not found! Please enter a valid path."
+      MEMORY_FILE=""
+      continue
+    fi
   fi
 
-  # Check if the memory file exists
-  if [ ! -f "$MEMORY_FILE" ]; then
-    echo "Error: File not found!"
-    continue
+  if [ -z "$OUTPUT_DIR" ];then
+    read -p "Please enter the directory where you want to save the output files: " OUTPUT_DIR
+    if [ ! -d "$OUTPUT_DIR" ];then
+      echo "Directory does not exist! Please create it or specify an existing directory."
+      OUTPUT_DIR=""
+      continue
+    fi
   fi
 
   # Profile selection loop for Volatility 2 (Volatility 3 doesn't need profile)
-  PROFILE=""
-  if [ "$USE_PROFILE" == true ]; then
+  if [ "$USE_PROFILE" == true ] && [ -z "$PROFILE" ];then
     while true; do
       # Ask the user to input the suggested profile or press Enter to skip
       echo "Please input the name of the suggested profile (e.g., Win7SP1x64 or WinXPSP2x86) or press Enter to run imageinfo:"
@@ -192,165 +166,135 @@ while true; do
       # If no profile is entered, run imageinfo to suggest profiles
       if [ -z "$PROFILE" ];then
         echo "Running imageinfo to suggest profiles..."
-        
-        # Run imageinfo and capture the output to extract profiles
         $VOL_CMD -f "$MEMORY_FILE" imageinfo > imageinfo_output.txt
-        if [ $? -eq 1 ]; then  # If interrupted, exit the program
+        if [ $? -eq 1 ];then
           echo "Process interrupted. Exiting..."
           exit 1
         fi
-        
-        # Extract profiles from the output, only picking the part after the colon
-        PROFILES=$(grep "Suggested Profile(s)" imageinfo_output.txt | cut -d ':' -f2 | tr ',' '\n' | sed 's/^[ \t]*//;s/[ \t]*$//')
 
+        # Extract profiles from imageinfo output
+        PROFILES=$(grep "Suggested Profile(s)" imageinfo_output.txt | cut -d ':' -f2 | tr ',' '\n' | sed 's/^[ \t]*//;s/[ \t]*$//')
         echo "Available profiles:"
-        select PROFILE in $PROFILES; do
-          if [ -n "$PROFILE" ]; then
-            echo "You have selected profile: $PROFILE"
+        select PROFILE_NAME in $PROFILES;do
+          if [ -n "$PROFILE_NAME" ];then
+            echo "You have selected profile: $PROFILE_NAME"
+            PROFILE=$PROFILE_NAME
             break
           else
             echo "Invalid selection, please choose again."
           fi
         done
       else
-        # Confirm profile input
         echo "You have selected profile: $PROFILE"
       fi
 
-      # Now ask if the user wants to proceed with this profile or go back to select another
-      while true; do
-        echo "1) Proceed with this profile"
-        echo "2) Go back and select another profile"
-        read -p "Please enter 1 or 2: " PROFILE_CHOICE
-        
-        if [ "$PROFILE_CHOICE" == "1" ]; then
-          echo "Proceeding with profile: $PROFILE"
-          break 2  # Proceed with command selection
-        elif [ "$PROFILE_CHOICE" == "2" ]; then
-          echo "Going back to profile selection..."
-          break  # Go back to profile selection
-        else
-          echo "Invalid input. Please enter 1 or 2."
-        fi
-      done
+      break
     done
   fi
 
-  # Proceed to the command selection menu
+  # Command selection menu
   while true; do
     echo "Available commands:"
-    if [ "$USE_PROFILE" == true ]; then
-      echo -e "\e[31m1)\e[0m \e[33mpslist\e[0m ($VOL_CMD -f \"$MEMORY_FILE\" --profile=\"$PROFILE\" pslist)"
-      echo -e "\e[31m2)\e[0m \e[33mpstree\e[0m ($VOL_CMD -f \"$MEMORY_FILE\" --profile=\"$PROFILE\" pstree)"
-      echo -e "\e[31m3)\e[0m \e[33mdlllist\e[0m ($VOL_CMD -f \"$MEMORY_FILE\" --profile=\"$PROFILE\" dlllist)"
-      echo -e "\e[31m4)\e[0m \e[33mnetscan\e[0m ($VOL_CMD -f \"$MEMORY_FILE\" --profile=\"$PROFILE\" netscan)"
-      echo -e "\e[31m5)\e[0m \e[33mfilescan\e[0m ($VOL_CMD -f \"$MEMORY_FILE\" --profile=\"$PROFILE\" filescan)"
-      echo -e "\e[31m6)\e[0m \e[33mmftparser\e[0m ($VOL_CMD -f \"$MEMORY_FILE\" --profile=\"$PROFILE\" mftsparser)"
-      echo -e "\e[31m7)\e[0m \e[33mmalfind\e[0m ($VOL_CMD -f \"$MEMORY_FILE\" --profile=\"$PROFILE\" malfind)"
-      echo -e "\e[31m8)\e[0m \e[33mEnter manual command"
-      echo -e "\e[31m9)\e[0m Exit"
+    if [ "$USE_PROFILE" == true ];then
+      for ((i=0; i<${#volatility_2_commands[@]}; i++));do
+        echo -e "\e[31m$((i+1)))\e[0m \e[33m${volatility_2_commands[$i]}\e[0m ($VOL_CMD -f \"$MEMORY_FILE\" --profile=\"$PROFILE\" ${volatility_2_commands[$i]})"
+      done
     else
-      echo -e "\e[31m1)\e[0m \e[33mpslist\e[0m ($VOL_CMD -f \"$MEMORY_FILE\" windows.pslist.PsList)"
-      echo -e "\e[31m2)\e[0m \e[33mpstree\e[0m ($VOL_CMD -f \"$MEMORY_FILE\" windows.pstree.PsTree)"  # Changed from pslist.pstree to pstree.pstree
-      echo -e "\e[31m3)\e[0m \e[33mdlllist\e[0m ($VOL_CMD -f \"$MEMORY_FILE\" windows.dlllist.DllList)"
-      echo -e "\e[31m4)\e[0m \e[33mnetscan\e[0m ($VOL_CMD -f \"$MEMORY_FILE\" windows.netscan.NetScan)"
-      echo -e "\e[31m5)\e[0m \e[33mfilescan\e[0m ($VOL_CMD -f \"$MEMORY_FILE\" windows.filescan.FileScan)"
-      echo -e "\e[31m6)\e[0m \e[33mMFTscan\e[0m ($VOL_CMD -f \"$MEMORY_FILE\" windows.mftscan.MFTScan)"
-      echo -e "\e[31m7)\e[0m \e[33mmalfind\e[0m ($VOL_CMD -f \"$MEMORY_FILE\" windows.malfind.Malfind)"
-      echo -e "\e[31m8)\e[0m \e[33mEnter manual command"
-      echo -e "\e[31m9)\e[0m Exit"
+      for ((i=0; i<${#volatility_3_commands_windows[@]}; i++));do
+        echo -e "\e[31m$((i+1)))\e[0m \e[33m${volatility_3_commands_windows[$i]}\e[0m ($VOL_CMD -f \"$MEMORY_FILE\" ${volatility_3_commands_windows[$i]})"
+      done
     fi
+    echo -e "\e[31m$((i+1)))\e[0m Enter manual command"
+    echo -e "\e[31m$((i+2)))\e[0m Exit"
+
+    # Command selection
     read -p "Please select a command to run: " COMMAND
+    CMD_INDEX=$((COMMAND-1))
 
-    case $COMMAND in
-      1)
-        OUTPUT_FILE="${OUTPUT_DIR}/pslist.txt"
-        if [ "$USE_PROFILE" == true ]; then
-          $VOL_CMD -f "$MEMORY_FILE" --profile="$PROFILE" pslist > "$OUTPUT_FILE"
-        else
-          $VOL_CMD -f "$MEMORY_FILE" windows.pslist.PsList > "$OUTPUT_FILE"
-        fi
-        ;;
-      2)
-        OUTPUT_FILE="${OUTPUT_DIR}/pstree.txt"
-        if [ "$USE_PROFILE" == true ]; then
-          $VOL_CMD -f "$MEMORY_FILE" --profile="$PROFILE" pstree > "$OUTPUT_FILE"
-        else
-          $VOL_CMD -f "$MEMORY_FILE" windows.pstree.PsTree > "$OUTPUT_FILE"
-        fi
-        ;;
-      3)
-        OUTPUT_FILE="${OUTPUT_DIR}/dlllist_all.txt"
-        if [ "$USE_PROFILE" == true ]; then
-          $VOL_CMD -f "$MEMORY_FILE" --profile="$PROFILE" dlllist > "$OUTPUT_FILE"
-        else
-          $VOL_CMD -f "$MEMORY_FILE" windows.dlllist.DllList > "$OUTPUT_FILE"
-        fi
-        ;;
-      4)
-        OUTPUT_FILE="${OUTPUT_DIR}/netscan.txt"
-        if [ "$USE_PROFILE" == true ]; then
-          $VOL_CMD -f "$MEMORY_FILE" --profile="$PROFILE" netscan > "$OUTPUT_FILE"
-        else
-          $VOL_CMD -f "$MEMORY_FILE" windows.netscan.NetScan > "$OUTPUT_FILE"
-        fi
-        ;;
-      5)
-        OUTPUT_FILE="${OUTPUT_DIR}/filescan.txt"
-        if [ "$USE_PROFILE" == true ]; then
-          $VOL_CMD -f "$MEMORY_FILE" --profile="$PROFILE" filescan > "$OUTPUT_FILE"
-        else
-          $VOL_CMD -f "$MEMORY_FILE" windows.filescan.FileScan > "$OUTPUT_FILE"
-        fi
-        ;;
-      6)
-        OUTPUT_FILE="${OUTPUT_DIR}/mftscan.txt"
-        if [ "$USE_PROFILE" == true ]; then
-          $VOL_CMD -f "$MEMORY_FILE" --profile="$PROFILE" mftparser > "$OUTPUT_FILE"
-        else
-          $VOL_CMD -f "$MEMORY_FILE" windows.mftscan.MFTScan > "$OUTPUT_FILE"
-        fi
-        ;;
-      7)
-        OUTPUT_FILE="${OUTPUT_DIR}/malfind.txt"
-        if [ "$USE_PROFILE" == true ]; then
-          $VOL_CMD -f "$MEMORY_FILE" --profile="$PROFILE" malfind > "$OUTPUT_FILE"
-        else
-          $VOL_CMD -f "$MEMORY_FILE" windows.malfind.Malfind > "$OUTPUT_FILE"
-        fi
-        ;;
-      8)
-        if [ "$VOL_VERSION" == "1" ]; then
-          echo -e "\e[33mExample usage for commands with --dump or -o switch for Volatility 2:\e[0m"
-          echo "python2 ./vol.py -f <memory_dump> --profile=<profile> procdump --dump-dir=<directory>"
-        else
-          echo -e "\e[33mExample usage for commands with --dump or -o switch for Volatility 3:\e[0m"
-          echo "vol -f <memory_dump> windows.procdump.ProcDump --dump"
-        fi
+    if [ "$USE_PROFILE" == true ] && [ "$CMD_INDEX" -lt "${#volatility_2_commands[@]}" ];then
+      OUTPUT_FILE="${OUTPUT_DIR}/${volatility_2_commands[$CMD_INDEX]}.txt"
+      $VOL_CMD -f "$MEMORY_FILE" --profile="$PROFILE" "${volatility_2_commands[$CMD_INDEX]}" > "$OUTPUT_FILE"
 
+      # Check if the output file is empty
+      if [ ! -s "$OUTPUT_FILE" ];then
+        echo -e "\e[31mWarning: The output file is empty. This may be due to an invalid profile or no data found for this command.\e[0m"
+        echo "Would you like to try another command or re-enter the profile?"
+        echo "1) Re-enter profile"
+        echo "2) Select another command"
+        read -p "Please enter 1 or 2: " CHOICE
+        if [ "$CHOICE" == "1" ];then
+          PROFILE=""
+          continue
+        else
+          continue
+        fi
+      else
+        echo "Command output saved to $OUTPUT_FILE"
+      fi
+
+    elif [ "$USE_PROFILE" == false ] && [ "$CMD_INDEX" -lt "${#volatility_3_commands_windows[@]}" ];then
+      OUTPUT_FILE="${OUTPUT_DIR}/${volatility_3_commands_windows[$CMD_INDEX]}.txt"
+      $VOL_CMD -f "$MEMORY_FILE" "${volatility_3_commands_windows[$CMD_INDEX]}" > "$OUTPUT_FILE"
+
+      # Check if the output file is empty
+      if [ ! -s "$OUTPUT_FILE" ];then
+        echo -e "\e[31mWarning: The output file is empty. This may be due to no data found or an invalid command.\e[0m"
+        echo "Would you like to try another command?"
+        echo "1) Select another command"
+        read -p "Please enter 1: " CHOICE
+        continue
+      else
+        echo "Command output saved to $OUTPUT_FILE"
+      fi
+
+    elif [ "$COMMAND" -eq $((i+1)) ];then
+      # Manual command handling
+      while true; do
         read -p "Please enter the manual command: " MANUAL_CMD
-        COMMAND_NAME=$(echo $MANUAL_CMD | awk '{print $1}')
-        
-        # Handle commands that include --dump or -o
-        if [[ $MANUAL_CMD == *"--dump"* ]] || [[ $MANUAL_CMD == *"-o"* ]]; then
-          echo -e "\e[33mThis command includes an option to save a dump to a file. Please provide the file path where the dump should be saved.\e[0m"
-          read -p "Enter output file path for dump: " DUMP_PATH
-          MANUAL_CMD+=" $DUMP_PATH"
-        fi
-        OUTPUT_FILE="${OUTPUT_DIR}/${COMMAND_NAME}_output.txt"
-        if [ "$USE_PROFILE" == true ]; then
-          $VOL_CMD -f "$MEMORY_FILE" --profile="$PROFILE" $MANUAL_CMD > "$OUTPUT_FILE"
+
+        # Check if the manual command exists in the expanded command list
+        if [[ "$USE_PROFILE" == true && ! " ${volatility_2_manual_commands[*]} " =~ " $MANUAL_CMD " ]] || \
+           [[ "$USE_PROFILE" == false && ! " ${volatility_3_manual_commands_windows[*]} " =~ " $MANUAL_CMD " ]]; then
+          echo -e "\e[31mError: Command '$MANUAL_CMD' not found.\e[0m"
+          echo "Here are the available manual commands:"
+          if [ "$USE_PROFILE" == true ];then
+            printf "%s\n" "${volatility_2_manual_commands[@]}"
+          else
+            printf "%s\n" "${volatility_3_manual_commands_windows[@]}"
+          fi
+          echo "Please try entering a valid command."
         else
-          $VOL_CMD -f "$MEMORY_FILE" $MANUAL_CMD > "$OUTPUT_FILE"
+          OUTPUT_FILE="${OUTPUT_DIR}/${MANUAL_CMD}.txt"  # Name the output file based on the manual command
+          if [ "$USE_PROFILE" == true ]; then
+            $VOL_CMD -f "$MEMORY_FILE" --profile="$PROFILE" $MANUAL_CMD > "$OUTPUT_FILE"
+          else
+            $VOL_CMD -f "$MEMORY_FILE" $MANUAL_CMD > "$OUTPUT_FILE"
+          fi
+
+          # Check if the output file is empty
+          if [ ! -s "$OUTPUT_FILE" ];then
+            echo -e "\e[31mWarning: The manual command returned no output.\e[0m"
+            echo "Would you like to re-enter the manual command?"
+            echo "1) Re-enter command"
+            echo "2) Select another command"
+            read -p "Please enter 1 or 2: " MANUAL_CHOICE
+            if [ "$MANUAL_CHOICE" == "1" ];then
+              continue
+            else
+              break
+            fi
+          else
+            echo "Manual command output saved to $OUTPUT_FILE"
+            break
+          fi
         fi
-        ;;
-      9)
-        echo "Exiting..."
-        exit 0
-        ;;
-      *)
-        echo "Invalid option, please choose again."
-        ;;
-    esac
+      done
+
+    elif [ "$COMMAND" -eq $((i+2)) ];then
+      echo "Exiting..."
+      exit 0
+    else
+      echo "Invalid option, please choose again."
+    fi
   done
 done
