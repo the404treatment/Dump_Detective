@@ -151,7 +151,7 @@ The output for each command is saved to a text file in the directory of your cho
 
 ## Credits
 
-Created by **Michael Pacheco**.
+Created by **The404Treatment**.
 
 ## License
 
