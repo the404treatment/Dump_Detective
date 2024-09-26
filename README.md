@@ -63,7 +63,7 @@ To install **Volatility 3**, follow these steps:
 
 Once you have Volatility installed, you can run the script from any directory:
 
-sudo bash ./dump_detected.sh
+sudo bash ./dump_detective.sh
 
 The script will prompt for the necessary file paths and allow you to select between Volatility 2 and 3.
 
